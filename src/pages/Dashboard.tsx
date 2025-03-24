@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowRight, ChevronLeft, ChevronRight, Plus, PencilLine, Edit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { format, addMonths, parse, isThisMonth, isThisYear } from "date-fns";
+import { format, addMonths, parse, isThisMonth, isThisYear, isSameMonth, isSameYear } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AddTransactionModal from "@/components/modals/AddTransactionModal";
 import EditTransactionModal from "@/components/modals/EditTransactionModal";
@@ -45,14 +45,17 @@ const Dashboard = () => {
   const currentMonthData = getCurrentMonthData();
   const previousMonthData = getPreviousMonthData();
 
-  const spendingByCategory = () => {
-    const currentMonthTransactions = data.transactions.filter(tx => {
-      const txDate = new Date(tx.date);
-      const selectedDate = parse(selectedMonth, "MMMM yyyy", new Date());
-      return tx.type === "expense" && 
-        txDate.getMonth() === selectedDate.getMonth() &&
-        txDate.getFullYear() === selectedDate.getFullYear();
+  const getTransactionsForSelectedMonth = () => {
+    const selectedDate = parse(selectedMonth, "MMMM yyyy", new Date());
+    return data.transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return isSameMonth(transactionDate, selectedDate) && 
+             isSameYear(transactionDate, selectedDate);
     });
+  };
+
+  const spendingByCategory = () => {
+    const currentMonthTransactions = getTransactionsForSelectedMonth().filter(tx => tx.type === "expense");
 
     const categoryTotals = currentMonthTransactions.reduce((acc, transaction) => {
       const { category, amount } = transaction;
@@ -76,13 +79,19 @@ const Dashboard = () => {
     }));
   };
 
-  const recentTransactions = data.transactions
+  const recentTransactions = getTransactionsForSelectedMonth()
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
   const handlePreviousMonth = () => {
     const currentDate = parse(selectedMonth, "MMMM yyyy", new Date());
     const previousMonth = addMonths(currentDate, -1);
+    const currentYear = new Date().getFullYear();
+    
+    if (previousMonth.getFullYear() < currentYear) {
+      return;
+    }
+    
     setSelectedMonth(format(previousMonth, "MMMM yyyy"));
   };
 
@@ -155,6 +164,13 @@ const Dashboard = () => {
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#FF6B6B"];
 
+  const canNavigateToPreviousMonth = () => {
+    const currentDate = parse(selectedMonth, "MMMM yyyy", new Date());
+    const previousMonth = addMonths(currentDate, -1);
+    const currentYear = new Date().getFullYear();
+    return previousMonth.getFullYear() >= currentYear;
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -175,6 +191,7 @@ const Dashboard = () => {
             size="icon"
             onClick={handlePreviousMonth}
             className="h-8 w-8"
+            disabled={!canNavigateToPreviousMonth()}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -400,7 +417,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground">
-                  No recent transactions found
+                  No transactions found for {selectedMonth}
                 </div>
               )}
             </div>
@@ -420,14 +437,9 @@ const Dashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {data.budgets.length > 0 ? (
-                data.budgets.slice(0, 4).map((budget) => {
-                  const categoryTransactions = data.transactions.filter(tx => {
-                    const txDate = new Date(tx.date);
-                    const selectedDate = parse(selectedMonth, "MMMM yyyy", new Date());
-                    return tx.category === budget.category && 
-                      tx.type === "expense" &&
-                      txDate.getMonth() === selectedDate.getMonth() &&
-                      txDate.getFullYear() === selectedDate.getFullYear();
+                data.budgets.map((budget) => {
+                  const categoryTransactions = getTransactionsForSelectedMonth().filter(tx => {
+                    return tx.category === budget.category && tx.type === "expense";
                   });
                   
                   const spent = categoryTransactions.reduce((total, tx) => total + tx.amount, 0);
@@ -459,16 +471,6 @@ const Dashboard = () => {
               ) : (
                 <div className="text-center py-6 text-muted-foreground">
                   No budget categories found
-                </div>
-              )}
-              
-              {data.budgets.length > 4 && (
-                <div className="text-center pt-2">
-                  <Link to="/budget">
-                    <Button variant="outline" size="sm">
-                      Show {data.budgets.length - 4} more categories
-                    </Button>
-                  </Link>
                 </div>
               )}
             </div>
