@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
 import { 
   BarChart, 
