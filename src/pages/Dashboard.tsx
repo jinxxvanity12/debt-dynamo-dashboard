@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
 import { 
@@ -16,11 +15,16 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, ChevronLeft, ChevronRight, Plus, PencilLine } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Plus, PencilLine, Edit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, addMonths, parse, isThisMonth, isThisYear } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AddTransactionModal from "@/components/modals/AddTransactionModal";
+import EditTransactionModal from "@/components/modals/EditTransactionModal";
+import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
+import { Transaction } from "@/contexts/AppDataContext";
+import ContributeSavingsModal from "@/components/modals/ContributeSavingsModal";
+import MakeDebtPaymentModal from "@/components/modals/MakeDebtPaymentModal";
 
 const Dashboard = () => {
   const { 
@@ -28,15 +32,19 @@ const Dashboard = () => {
     selectedMonth, 
     setSelectedMonth, 
     getCurrentMonthData, 
-    getPreviousMonthData 
+    getPreviousMonthData,
+    deleteTransaction 
   } = useAppData();
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [contributingSavings, setContributingSavings] = useState<string | null>(null);
+  const [payingDebt, setPayingDebt] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const currentMonthData = getCurrentMonthData();
   const previousMonthData = getPreviousMonthData();
 
-  // Calculate spending by category
   const spendingByCategory = () => {
     const currentMonthTransactions = data.transactions.filter(tx => {
       const txDate = new Date(tx.date);
@@ -59,7 +67,6 @@ const Dashboard = () => {
     }));
   };
 
-  // Calculate income vs expenses data
   const incomeVsExpensesData = () => {
     const monthsData = data.monthlyData.slice(0, 6);
     return monthsData.map(md => ({
@@ -69,12 +76,10 @@ const Dashboard = () => {
     }));
   };
 
-  // Get recent transactions
   const recentTransactions = data.transactions
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
-  // Navigate between months
   const handlePreviousMonth = () => {
     const currentDate = parse(selectedMonth, "MMMM yyyy", new Date());
     const previousMonth = addMonths(currentDate, -1);
@@ -86,7 +91,6 @@ const Dashboard = () => {
     const nextMonth = addMonths(currentDate, 1);
     const currentYear = new Date().getFullYear();
     
-    // Prevent navigating beyond the current month in the current year
     if (nextMonth.getFullYear() > currentYear) {
       return;
     }
@@ -98,7 +102,6 @@ const Dashboard = () => {
     setSelectedMonth(format(nextMonth, "MMMM yyyy"));
   };
 
-  // Format currency
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('en-US', {
       style: 'currency',
@@ -107,10 +110,32 @@ const Dashboard = () => {
     });
   };
 
-  // Calculate percentage change
   const calculateChange = (current: number, previous: number) => {
     if (!previous) return 0;
     return Math.round(((current - previous) / previous) * 100);
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+  };
+
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setDeletingTransaction(transaction);
+  };
+
+  const confirmDeleteTransaction = () => {
+    if (deletingTransaction) {
+      deleteTransaction(deletingTransaction.id);
+      setDeletingTransaction(null);
+    }
+  };
+
+  const calculateSavingsProgress = (currentAmount: number, targetAmount: number) => {
+    return Math.min(Math.round((currentAmount / targetAmount) * 100), 100);
+  };
+
+  const calculateDebtProgress = (remainingAmount: number, totalAmount: number) => {
+    return Math.min(Math.round(((totalAmount - remainingAmount) / totalAmount) * 100), 100);
   };
 
   const totalIncome = currentMonthData?.income || 0;
@@ -331,26 +356,46 @@ const Dashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {recentTransactions.length > 0 ? (
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-3 font-medium text-sm text-muted-foreground">Date</div>
-                  <div className="col-span-4 font-medium text-sm text-muted-foreground">Description</div>
-                  <div className="col-span-3 font-medium text-sm text-muted-foreground">Category</div>
-                  <div className="col-span-2 font-medium text-sm text-muted-foreground text-right">Amount</div>
+                <div>
+                  <div className="grid grid-cols-12 gap-4 mb-2">
+                    <div className="col-span-3 font-medium text-sm text-muted-foreground">Date</div>
+                    <div className="col-span-3 font-medium text-sm text-muted-foreground">Description</div>
+                    <div className="col-span-2 font-medium text-sm text-muted-foreground">Category</div>
+                    <div className="col-span-2 font-medium text-sm text-muted-foreground text-right">Amount</div>
+                    <div className="col-span-2 font-medium text-sm text-muted-foreground text-right">Actions</div>
+                  </div>
                   
                   {recentTransactions.map((transaction) => (
-                    <React.Fragment key={transaction.id}>
+                    <div key={transaction.id} className="grid grid-cols-12 gap-4 py-2 border-b last:border-b-0">
                       <div className="col-span-3 text-sm">
                         {format(new Date(transaction.date), "MMM dd, yyyy")}
                       </div>
-                      <div className="col-span-4 text-sm truncate-text">{transaction.description}</div>
-                      <div className="col-span-3 text-sm">{transaction.category}</div>
+                      <div className="col-span-3 text-sm truncate-text">{transaction.description}</div>
+                      <div className="col-span-2 text-sm">{transaction.category}</div>
                       <div className={`col-span-2 text-sm font-medium text-right ${
                         transaction.type === "income" ? "text-success" : "text-danger"
                       }`}>
                         {transaction.type === "income" ? "+" : "-"}
                         {formatCurrency(transaction.amount)}
                       </div>
-                    </React.Fragment>
+                      <div className="col-span-2 flex justify-end items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditTransaction(transaction)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-danger"
+                          onClick={() => handleDeleteTransaction(transaction)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -430,11 +475,179 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-xl">Savings Goals</CardTitle>
+            <Link to="/savings">
+              <Button variant="ghost" size="sm" className="gap-1">
+                View All <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {data.savingsGoals.length > 0 ? (
+                data.savingsGoals.slice(0, 3).map((goal) => {
+                  const progress = calculateSavingsProgress(goal.currentAmount, goal.targetAmount);
+                  const remaining = goal.targetAmount - goal.currentAmount;
+                  
+                  return (
+                    <div key={goal.id} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{goal.name}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setContributingSavings(goal.id)}
+                        >
+                          Contribute
+                        </Button>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{formatCurrency(goal.currentAmount)} of {formatCurrency(goal.targetAmount)}</span>
+                        <span>{progress}% complete</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2.5">
+                        <div
+                          className="h-2.5 rounded-full bg-success"
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatCurrency(remaining)} remaining
+                        {goal.deadline && (
+                          <span> (Due: {format(new Date(goal.deadline), "MMM dd, yyyy")})</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  No savings goals found
+                </div>
+              )}
+              
+              {data.savingsGoals.length > 3 && (
+                <div className="text-center pt-2">
+                  <Link to="/savings">
+                    <Button variant="outline" size="sm">
+                      Show {data.savingsGoals.length - 3} more savings goals
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-xl">Debt Tracker</CardTitle>
+            <Link to="/debt">
+              <Button variant="ghost" size="sm" className="gap-1">
+                View All <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {data.debts.filter(debt => !debt.isCompleted).length > 0 ? (
+                data.debts.filter(debt => !debt.isCompleted).slice(0, 3).map((debt) => {
+                  const progress = calculateDebtProgress(debt.remainingAmount, debt.totalAmount);
+                  const paidOff = debt.totalAmount - debt.remainingAmount;
+                  
+                  return (
+                    <div key={debt.id} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{debt.name}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setPayingDebt(debt.id)}
+                        >
+                          Make Payment
+                        </Button>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{formatCurrency(debt.remainingAmount)} remaining</span>
+                        <span>{progress}% paid off</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2.5">
+                        <div
+                          className="h-2.5 rounded-full bg-primary"
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Interest rate: {debt.interestRate}%
+                        {debt.dueDate && (
+                          <span className="ml-2">Next payment: {format(new Date(debt.dueDate), "MMM dd, yyyy")}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  No active debts found
+                </div>
+              )}
+              
+              {data.debts.filter(debt => !debt.isCompleted).length > 3 && (
+                <div className="text-center pt-2">
+                  <Link to="/debt">
+                    <Button variant="outline" size="sm">
+                      Show {data.debts.filter(debt => !debt.isCompleted).length - 3} more debts
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
       {showAddTransaction && (
         <AddTransactionModal 
           open={showAddTransaction} 
           onOpenChange={setShowAddTransaction} 
+        />
+      )}
+
+      {editingTransaction && (
+        <EditTransactionModal
+          transaction={editingTransaction}
+          open={!!editingTransaction}
+          onOpenChange={(open) => !open && setEditingTransaction(null)}
+        />
+      )}
+
+      {deletingTransaction && (
+        <DeleteConfirmationModal
+          title="Delete Transaction"
+          description={`Are you sure you want to delete the transaction "${deletingTransaction.description}"? This action cannot be undone.`}
+          open={!!deletingTransaction}
+          onOpenChange={(open) => !open && setDeletingTransaction(null)}
+          onConfirm={confirmDeleteTransaction}
+        />
+      )}
+
+      {contributingSavings && (
+        <ContributeSavingsModal
+          savingsGoalId={contributingSavings}
+          open={!!contributingSavings}
+          onOpenChange={(open) => !open && setContributingSavings(null)}
+        />
+      )}
+
+      {payingDebt && (
+        <MakeDebtPaymentModal
+          debtId={payingDebt}
+          open={!!payingDebt}
+          onOpenChange={(open) => !open && setPayingDebt(null)}
         />
       )}
     </div>
