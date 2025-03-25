@@ -27,6 +27,42 @@ This will:
 - Map the application to port 80 on your host machine
 - Set up a persistent volume for the database data
 
+### Troubleshooting Docker Issues
+
+#### Network Connectivity Issues
+
+If you encounter errors like:
+```
+Error response from daemon: Get "https://registry-1.docker.io/v2/": dial tcp: lookup registry-1.docker.io: server misbehaving
+```
+
+Try these solutions:
+
+1. **Check your internet connection** - Ensure you have a stable internet connection.
+
+2. **Configure DNS** - Update your DNS settings:
+   ```bash
+   # Edit resolv.conf
+   sudo nano /etc/resolv.conf
+   
+   # Add Google's public DNS servers
+   nameserver 8.8.8.8
+   nameserver 8.8.4.4
+   ```
+
+3. **Restart Docker service**:
+   ```bash
+   sudo systemctl restart docker
+   ```
+
+4. **Pull images explicitly** before running docker-compose:
+   ```bash
+   docker pull postgres:13
+   docker pull node:16-alpine
+   ```
+
+5. **Use a VPN** if your ISP is blocking Docker Hub.
+
 ### Accessing the Application
 
 Once the containers are running, you can access the application by navigating to:
