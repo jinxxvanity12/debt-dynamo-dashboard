@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { format } from "date-fns";
+import { format, parse, isSameMonth, isSameYear } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
 
@@ -177,20 +177,80 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isAuthenticated, user]);
 
+  useEffect(() => {
+    if (data.transactions.length > 0) {
+      const updatedMonthlyData = calculateMonthlyData(data.transactions);
+      
+      if (JSON.stringify(updatedMonthlyData) !== JSON.stringify(data.monthlyData)) {
+        setData(prevData => ({
+          ...prevData,
+          monthlyData: updatedMonthlyData
+        }));
+        
+        if (user) {
+          // Save updated data to localStorage
+          localStorage.setItem(getStorageKey(user.id, "appData"), JSON.stringify({
+            ...data,
+            monthlyData: updatedMonthlyData
+          }));
+        }
+      }
+    }
+  }, [data.transactions, user]);
+
+  const calculateMonthlyData = (transactions: Transaction[]): MonthlyData[] => {
+    const currentYear = new Date().getFullYear();
+    const monthsInYear = Array.from({ length: 12 }, (_, i) => {
+      return format(new Date(currentYear, i, 1), "MMMM yyyy");
+    });
+    
+    const monthlyData: MonthlyData[] = monthsInYear.map(month => ({
+      month,
+      income: 0,
+      expenses: 0,
+      balance: 0,
+      savingsRate: 0
+    }));
+    
+    transactions.forEach(transaction => {
+      const transactionDate = new Date(transaction.date);
+      
+      if (transactionDate.getFullYear() === currentYear) {
+        const monthIndex = transactionDate.getMonth();
+        const monthData = monthlyData[monthIndex];
+        
+        if (transaction.type === "income") {
+          monthData.income += transaction.amount;
+        } else if (transaction.type === "expense") {
+          monthData.expenses += transaction.amount;
+        }
+      }
+    });
+    
+    monthlyData.forEach(monthData => {
+      monthData.balance = monthData.income - monthData.expenses;
+      
+      if (monthData.income > 0) {
+        monthData.savingsRate = Math.round((monthData.balance / monthData.income) * 100);
+      } else {
+        monthData.savingsRate = 0;
+      }
+    });
+    
+    return monthlyData;
+  };
+
   const loadData = (userId: string) => {
     setLoading(true);
     
     try {
-      // For each data type, try to load from localStorage or use empty data
       let userData: AppData | null = null;
       
       const storedData = localStorage.getItem(getStorageKey(userId, "appData"));
       if (storedData) {
         userData = JSON.parse(storedData);
       } else {
-        // If no data is found, use empty data
         userData = generateEmptyData();
-        // Save empty data to localStorage
         localStorage.setItem(getStorageKey(userId, "appData"), JSON.stringify(userData));
       }
       
@@ -199,7 +259,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error loading app data:", error);
       toast.error("Failed to load your financial data");
       
-      // Fallback to empty data
       const emptyData = generateEmptyData();
       setData(emptyData);
     } finally {
@@ -207,21 +266,18 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Save all data to localStorage
   const saveData = (newData: AppData) => {
     if (user) {
       localStorage.setItem(getStorageKey(user.id, "appData"), JSON.stringify(newData));
     }
   };
 
-  // Set selected month
   const setSelectedMonth = (month: string) => {
     const updatedData = { ...data, selectedMonth: month };
     setData(updatedData);
     saveData(updatedData);
   };
 
-  // Transaction methods
   const addTransaction = (transaction: Omit<Transaction, "id">) => {
     const newTransaction = {
       ...transaction,
@@ -266,7 +322,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Transaction deleted successfully");
   };
 
-  // Budget methods
   const addBudget = (budget: Omit<Budget, "id">) => {
     const newBudget = {
       ...budget,
@@ -311,7 +366,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Budget deleted successfully");
   };
 
-  // Savings goal methods
   const addSavingsGoal = (savingsGoal: Omit<SavingsGoal, "id">) => {
     const newSavingsGoal = {
       ...savingsGoal,
@@ -368,7 +422,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       return sg;
     });
     
-    // Add a transaction for this contribution
     const savingsGoal = data.savingsGoals.find(sg => sg.id === id);
     if (savingsGoal) {
       const newTransaction = {
@@ -392,7 +445,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Debt methods
   const addDebt = (debt: Omit<Debt, "id" | "isCompleted">) => {
     const newDebt = {
       ...debt,
@@ -453,7 +505,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       return d;
     });
     
-    // Add a transaction for this payment
     const debt = data.debts.find(d => d.id === id);
     if (debt) {
       const newTransaction = {
@@ -504,7 +555,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Debt marked as completed");
   };
 
-  // Category methods
   const addCategory = (category: Omit<Category, "id">) => {
     const newCategory = {
       ...category,
@@ -537,7 +587,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteCategory = (id: string) => {
-    // Check if category is in use
     const isInUse = data.transactions.some(tx => {
       const category = data.categories.find(c => c.id === id);
       return category && tx.category === category.name;
@@ -563,7 +612,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Category deleted successfully");
   };
 
-  // Helper methods for monthly data
   const getCurrentMonthData = () => {
     return data.monthlyData.find(md => md.month === data.selectedMonth);
   };
