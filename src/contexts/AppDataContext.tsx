@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -103,158 +102,41 @@ export const useAppData = () => {
   return context;
 };
 
-// Default categories for new users
+// Default categories for new users - reduced to just essentials
 const defaultCategories: Category[] = [
   { id: "cat-1", name: "Housing", color: "#3B82F6", icon: "home", type: "expense" },
   { id: "cat-2", name: "Food", color: "#F97316", icon: "utensils", type: "expense" },
   { id: "cat-3", name: "Transportation", color: "#8B5CF6", icon: "car", type: "expense" },
   { id: "cat-4", name: "Utilities", color: "#10B981", icon: "bolt", type: "expense" },
-  { id: "cat-5", name: "Entertainment", color: "#EC4899", icon: "film", type: "expense" },
-  { id: "cat-6", name: "Shopping", color: "#F43F5E", icon: "shopping-bag", type: "expense" },
-  { id: "cat-7", name: "Healthcare", color: "#06B6D4", icon: "heart-pulse", type: "expense" },
-  { id: "cat-8", name: "Salary", color: "#22C55E", icon: "briefcase", type: "income" },
-  { id: "cat-9", name: "Investments", color: "#EAB308", icon: "trending-up", type: "income" },
-  { id: "cat-10", name: "Gifts", color: "#D946EF", icon: "gift", type: "income" },
+  { id: "cat-5", name: "Salary", color: "#22C55E", icon: "briefcase", type: "income" },
 ];
 
-// Generate 12 months of demo data
-const generateMonthlyData = (): MonthlyData[] => {
+// Generate empty monthly data
+const generateEmptyMonthlyData = (): MonthlyData[] => {
   const currentYear = new Date().getFullYear();
   return Array.from({ length: 12 }, (_, i) => {
     const month = format(new Date(currentYear, i, 1), "MMMM yyyy");
-    const income = 3000 + Math.floor(Math.random() * 1000);
-    const expenses = 2000 + Math.floor(Math.random() * 500);
-    const balance = income - expenses;
-    const savingsRate = Math.round((balance / income) * 100);
     
     return {
       month,
-      income,
-      expenses,
-      balance,
-      savingsRate
+      income: 0,
+      expenses: 0,
+      balance: 0,
+      savingsRate: 0
     };
   });
 };
 
-// Sample demo data
-const generateDemoData = (): AppData => {
-  const monthlyData = generateMonthlyData();
+// Empty data structure
+const generateEmptyData = (): AppData => {
+  const monthlyData = generateEmptyMonthlyData();
   const currentMonth = format(new Date(), "MMMM yyyy");
   
-  const demoTransactions: Transaction[] = [
-    {
-      id: "tx-1",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Salary deposit",
-      amount: 3500,
-      category: "Salary",
-      type: "income"
-    },
-    {
-      id: "tx-2",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Rent payment",
-      amount: 1200,
-      category: "Housing",
-      type: "expense"
-    },
-    {
-      id: "tx-3",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Grocery shopping",
-      amount: 150,
-      category: "Food",
-      type: "expense"
-    },
-    {
-      id: "tx-4",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Gas",
-      amount: 45,
-      category: "Transportation",
-      type: "expense"
-    },
-    {
-      id: "tx-5",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Restaurant dinner",
-      amount: 80,
-      category: "Food",
-      type: "expense"
-    }
-  ];
-  
-  const demoBudgets: Budget[] = [
-    { id: "budget-1", category: "Housing", amount: 1200 },
-    { id: "budget-2", category: "Food", amount: 500 },
-    { id: "budget-3", category: "Transportation", amount: 300 },
-    { id: "budget-4", category: "Utilities", amount: 200 },
-    { id: "budget-5", category: "Entertainment", amount: 150 }
-  ];
-  
-  const demoSavingsGoals: SavingsGoal[] = [
-    {
-      id: "savings-1",
-      name: "Emergency Fund",
-      targetAmount: 10000,
-      currentAmount: 5000,
-      deadline: format(new Date(new Date().setMonth(new Date().getMonth() + 6)), "yyyy-MM-dd")
-    },
-    {
-      id: "savings-2",
-      name: "Vacation",
-      targetAmount: 3000,
-      currentAmount: 1200,
-      deadline: format(new Date(new Date().setMonth(new Date().getMonth() + 3)), "yyyy-MM-dd")
-    },
-    {
-      id: "savings-3",
-      name: "New Car",
-      targetAmount: 20000,
-      currentAmount: 2500,
-      deadline: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), "yyyy-MM-dd")
-    }
-  ];
-  
-  const demoDebts: Debt[] = [
-    {
-      id: "debt-1",
-      name: "Credit Card",
-      totalAmount: 5000,
-      remainingAmount: 3200,
-      interestRate: 17.99,
-      minimumPayment: 100,
-      dueDate: format(new Date(new Date().setDate(new Date().getDate() + 15)), "yyyy-MM-dd"),
-      isCompleted: false
-    },
-    {
-      id: "debt-2",
-      name: "Student Loan",
-      totalAmount: 25000,
-      remainingAmount: 18000,
-      interestRate: 4.5,
-      minimumPayment: 250,
-      dueDate: format(new Date(new Date().setDate(new Date().getDate() + 20)), "yyyy-MM-dd"),
-      isCompleted: false
-    },
-    {
-      id: "debt-3",
-      name: "Car Loan",
-      totalAmount: 15000,
-      remainingAmount: 8500,
-      interestRate: 3.9,
-      minimumPayment: 350,
-      dueDate: format(new Date(new Date().setDate(new Date().getDate() + 10)), "yyyy-MM-dd"),
-      isCompleted: false
-    }
-  ];
-  
   return {
-    transactions: demoTransactions,
-    budgets: demoBudgets,
-    savingsGoals: demoSavingsGoals,
-    debts: demoDebts,
+    transactions: [],
+    budgets: [],
+    savingsGoals: [],
+    debts: [],
     categories: defaultCategories,
     monthlyData,
     selectedMonth: currentMonth
@@ -299,16 +181,16 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      // For each data type, try to load from localStorage or use demo data
+      // For each data type, try to load from localStorage or use empty data
       let userData: AppData | null = null;
       
       const storedData = localStorage.getItem(getStorageKey(userId, "appData"));
       if (storedData) {
         userData = JSON.parse(storedData);
       } else {
-        // If no data is found, use demo data
-        userData = generateDemoData();
-        // Save demo data to localStorage
+        // If no data is found, use empty data
+        userData = generateEmptyData();
+        // Save empty data to localStorage
         localStorage.setItem(getStorageKey(userId, "appData"), JSON.stringify(userData));
       }
       
@@ -317,9 +199,9 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error loading app data:", error);
       toast.error("Failed to load your financial data");
       
-      // Fallback to demo data
-      const demoData = generateDemoData();
-      setData(demoData);
+      // Fallback to empty data
+      const emptyData = generateEmptyData();
+      setData(emptyData);
     } finally {
       setLoading(false);
     }

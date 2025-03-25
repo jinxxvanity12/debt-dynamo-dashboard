@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, ChevronLeft, ChevronRight, Plus, PencilLine, Edit, Trash2 } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Plus, PencilLine, Edit, Trash2, Copy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, addMonths, parse, isThisMonth, isThisYear, isSameMonth, isSameYear } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -25,6 +25,7 @@ import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal
 import { Transaction } from "@/contexts/AppDataContext";
 import ContributeSavingsModal from "@/components/modals/ContributeSavingsModal";
 import MakeDebtPaymentModal from "@/components/modals/MakeDebtPaymentModal";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const { 
@@ -33,7 +34,8 @@ const Dashboard = () => {
     setSelectedMonth, 
     getCurrentMonthData, 
     getPreviousMonthData,
-    deleteTransaction 
+    deleteTransaction,
+    addBudget
   } = useAppData();
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -145,6 +147,29 @@ const Dashboard = () => {
 
   const calculateDebtProgress = (remainingAmount: number, totalAmount: number) => {
     return Math.min(Math.round(((totalAmount - remainingAmount) / totalAmount) * 100), 100);
+  };
+
+  const copyBudgetFromPreviousMonth = () => {
+    const currentMonth = parse(selectedMonth, "MMMM yyyy", new Date());
+    const previousMonth = format(addMonths(currentMonth, -1), "MMMM yyyy");
+    
+    if (!data.monthlyData.some(md => md.month === previousMonth)) {
+      toast.error(`No budget data found for ${previousMonth}`);
+      return;
+    }
+    
+    const existingBudgets = data.budgets;
+    
+    let copiedCount = 0;
+    existingBudgets.forEach(budget => {
+      addBudget({
+        category: budget.category,
+        amount: budget.amount
+      });
+      copiedCount++;
+    });
+    
+    toast.success(`Copied ${copiedCount} budget categories from ${previousMonth} to ${selectedMonth}`);
   };
 
   const totalIncome = currentMonthData?.income || 0;
@@ -427,12 +452,23 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xl">Monthly Budget</CardTitle>
-            <Link to="/budget">
-              <Button variant="ghost" size="sm" className="gap-1">
-                <PencilLine className="h-4 w-4 mr-1" />
-                Adjust Budget
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={copyBudgetFromPreviousMonth}
+                className="gap-1"
+              >
+                <Copy className="h-4 w-4" />
+                Copy From Previous Month
               </Button>
-            </Link>
+              <Link to="/budget">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  <PencilLine className="h-4 w-4 mr-1" />
+                  Adjust Budget
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
