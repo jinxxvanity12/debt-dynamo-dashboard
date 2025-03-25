@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { format, parse, isSameMonth, isSameYear } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
 
@@ -145,7 +145,7 @@ const generateEmptyData = (): AppData => {
 
 // Local storage keys
 const STORAGE_KEY_PREFIX = "savings-saga-";
-const getStorageKey = (userId: string, key: string) => `${STORAGE_KEY_PREFIX}${userId}-${key}`;
+const getStorageKey = (userId: string) => `${STORAGE_KEY_PREFIX}${userId}-data`;
 
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated } = useAuth();
@@ -174,6 +174,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         monthlyData: [],
         selectedMonth: format(new Date(), "MMMM yyyy")
       });
+      setLoading(false);
     }
   }, [isAuthenticated, user]);
 
@@ -188,11 +189,10 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         }));
         
         if (user) {
-          // Save updated data to localStorage
-          localStorage.setItem(getStorageKey(user.id, "appData"), JSON.stringify({
+          saveData({
             ...data,
             monthlyData: updatedMonthlyData
-          }));
+          });
         }
       }
     }
@@ -246,15 +246,16 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     try {
       let userData: AppData | null = null;
       
-      const storedData = localStorage.getItem(getStorageKey(userId, "appData"));
+      const storedData = localStorage.getItem(getStorageKey(userId));
       if (storedData) {
         userData = JSON.parse(storedData);
       } else {
         userData = generateEmptyData();
-        localStorage.setItem(getStorageKey(userId, "appData"), JSON.stringify(userData));
+        saveData(userData);
       }
       
       setData(userData);
+      console.log(`Loaded data for user ${userId}`, userData);
     } catch (error) {
       console.error("Error loading app data:", error);
       toast.error("Failed to load your financial data");
@@ -268,7 +269,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
   const saveData = (newData: AppData) => {
     if (user) {
-      localStorage.setItem(getStorageKey(user.id, "appData"), JSON.stringify(newData));
+      localStorage.setItem(getStorageKey(user.id), JSON.stringify(newData));
+      console.log(`Saved data for user ${user.id}`);
     }
   };
 

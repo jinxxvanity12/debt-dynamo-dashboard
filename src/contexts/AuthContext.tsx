@@ -27,33 +27,56 @@ export const useAuth = () => {
   return context;
 };
 
+// Store users in localStorage for persistence
+const USERS_STORAGE_KEY = "savings-saga-users";
+const AUTH_USER_KEY = "savings-saga-auth-user";
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is stored in localStorage
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem(AUTH_USER_KEY);
     
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error("Failed to parse stored user:", error);
-        localStorage.removeItem("user");
+        localStorage.removeItem(AUTH_USER_KEY);
       }
     }
     
     setLoading(false);
   }, []);
 
+  // Get stored users or initialize empty array
+  const getStoredUsers = (): Record<string, { id: string; name: string; email: string; password: string }> => {
+    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (storedUsers) {
+      try {
+        return JSON.parse(storedUsers);
+      } catch (error) {
+        console.error("Failed to parse stored users:", error);
+      }
+    }
+    return {};
+  };
+
+  // Save users to localStorage
+  const saveUsers = (users: Record<string, { id: string; name: string; email: string; password: string }>) => {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  };
+
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      // Simulated login - in a real app, this would call an API
-      // This is just for demo purposes
+      
+      // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Demo account logic for quick testing
       if (email === "demo@example.com" && password === "password") {
         const userData = {
           id: "user-1",
@@ -62,7 +85,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        toast.success("Login successful");
+        return true;
+      }
+      
+      // Check stored users
+      const users = getStoredUsers();
+      const foundUser = Object.values(users).find(u => u.email === email);
+      
+      if (foundUser && foundUser.password === password) {
+        const userData = {
+          id: foundUser.id,
+          name: foundUser.name,
+          email: foundUser.email
+        };
+        
+        setUser(userData);
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
         toast.success("Login successful");
         return true;
       }
@@ -81,17 +121,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (name: string, email: string, password: string) => {
     try {
       setLoading(true);
-      // Simulated registration - in a real app, this would call an API
+      
+      // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Check if email already exists
+      const users = getStoredUsers();
+      
+      if (Object.values(users).some(u => u.email === email)) {
+        toast.error("Email already in use");
+        return false;
+      }
+      
+      const userId = `user-${Date.now()}`;
+      const newUser = {
+        id: userId,
+        name,
+        email,
+        password
+      };
+      
+      // Save new user
+      users[userId] = newUser;
+      saveUsers(users);
+      
       const userData = {
-        id: `user-${Date.now()}`,
+        id: userId,
         name,
         email
       };
       
       setUser(userData);
-      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
       toast.success("Registration successful");
       return true;
     } catch (error) {
@@ -105,7 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("user");
+    localStorage.removeItem(AUTH_USER_KEY);
     toast.success("Logged out successfully");
   };
 
