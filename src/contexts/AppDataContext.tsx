@@ -179,7 +179,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   }, [isAuthenticated, user]);
 
   useEffect(() => {
-    if (data.transactions.length > 0) {
+    if (data.transactions.length > 0 || data.monthlyData.length > 0) {
       const updatedMonthlyData = calculateMonthlyData(data.transactions);
       
       if (JSON.stringify(updatedMonthlyData) !== JSON.stringify(data.monthlyData)) {
@@ -314,9 +314,12 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteTransaction = (id: string) => {
     const updatedTransactions = data.transactions.filter((tx) => tx.id !== id);
     
+    const updatedMonthlyData = calculateMonthlyData(updatedTransactions);
+    
     const updatedData = {
       ...data,
-      transactions: updatedTransactions
+      transactions: updatedTransactions,
+      monthlyData: updatedMonthlyData
     };
     
     setData(updatedData);
