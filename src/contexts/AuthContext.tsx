@@ -27,7 +27,7 @@ export const useAuth = () => {
   return context;
 };
 
-// Store users in localStorage for persistence
+// Store users in localStorage for persistence with consistent keys
 const USERS_STORAGE_KEY = "savings-saga-users";
 const AUTH_USER_KEY = "savings-saga-auth-user";
 
@@ -35,38 +35,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Enhanced user session restoration on initial load
   useEffect(() => {
-    // Check if user is stored in localStorage
-    const storedUser = localStorage.getItem(AUTH_USER_KEY);
-    
-    if (storedUser) {
+    const restoreUserSession = () => {
       try {
-        setUser(JSON.parse(storedUser));
+        const storedUser = localStorage.getItem(AUTH_USER_KEY);
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          console.log("User session restored:", parsedUser.email);
+        }
       } catch (error) {
-        console.error("Failed to parse stored user:", error);
+        console.error("Failed to restore user session:", error);
         localStorage.removeItem(AUTH_USER_KEY);
+      } finally {
+        setLoading(false);
       }
-    }
-    
-    setLoading(false);
+    };
+
+    restoreUserSession();
   }, []);
 
-  // Get stored users or initialize empty array
+  // Get stored users or initialize empty object
   const getStoredUsers = (): Record<string, { id: string; name: string; email: string; password: string }> => {
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    if (storedUsers) {
-      try {
+    try {
+      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      if (storedUsers) {
         return JSON.parse(storedUsers);
-      } catch (error) {
-        console.error("Failed to parse stored users:", error);
       }
+    } catch (error) {
+      console.error("Failed to parse stored users:", error);
     }
     return {};
   };
 
   // Save users to localStorage
   const saveUsers = (users: Record<string, { id: string; name: string; email: string; password: string }>) => {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    try {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      console.log("Users database updated, total users:", Object.keys(users).length);
+    } catch (error) {
+      console.error("Failed to save users:", error);
+      toast.error("Failed to update user database");
+    }
   };
 
   const login = async (email: string, password: string) => {
@@ -79,20 +90,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Demo account logic for quick testing
       if (email === "demo@example.com" && password === "password") {
         const userData = {
-          id: "user-1",
+          id: "demo-user",
           name: "Demo User",
           email: "demo@example.com"
         };
         
         setUser(userData);
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        console.log("Demo user logged in");
         toast.success("Login successful");
         return true;
       }
       
       // Check stored users
       const users = getStoredUsers();
-      const foundUser = Object.values(users).find(u => u.email === email);
+      const foundUser = Object.values(users).find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (foundUser && foundUser.password === password) {
         const userData = {
@@ -103,10 +115,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         setUser(userData);
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        console.log("User logged in:", userData.email);
         toast.success("Login successful");
         return true;
       }
       
+      console.log("Login failed for email:", email);
       toast.error("Invalid email or password");
       return false;
     } catch (error) {
@@ -125,10 +139,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Check if email already exists
+      // Check if email already exists (case insensitive)
       const users = getStoredUsers();
       
-      if (Object.values(users).some(u => u.email === email)) {
+      if (Object.values(users).some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        console.log("Registration failed - email already exists:", email);
         toast.error("Email already in use");
         return false;
       }
@@ -153,6 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setUser(userData);
       localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+      console.log("New user registered:", userData.email);
       toast.success("Registration successful");
       return true;
     } catch (error) {
@@ -167,6 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem(AUTH_USER_KEY);
+    console.log("User logged out");
     toast.success("Logged out successfully");
   };
 

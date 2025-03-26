@@ -8,6 +8,8 @@ services:
       - db
     environment:
       - DATABASE_URL=postgres://user:password@db:5432/savings_saga
+    volumes:
+      - app-data:/usr/share/nginx/html/data
     networks:
       - app-network
 
@@ -30,4 +32,7 @@ networks:
     driver: bridge
 
 volumes:
+  app-data:
+    driver: local
   db-data:
+    driver: local
