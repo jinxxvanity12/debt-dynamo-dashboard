@@ -73,6 +73,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const saveUsers = (users: Record<string, { id: string; name: string; email: string; password: string }>) => {
     try {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      // Also save to session storage to help with cross-browser persistence
+      sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
       console.log("Users database updated, total users:", Object.keys(users).length);
     } catch (error) {
       console.error("Failed to save users:", error);
@@ -96,7 +98,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         setUser(userData);
+        // Store in both localStorage and sessionStorage for cross-browser support
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        document.cookie = `${AUTH_USER_KEY}=${JSON.stringify(userData)}; path=/; max-age=2592000`; // 30 days
         console.log("Demo user logged in");
         toast.success("Login successful");
         return true;
@@ -114,7 +119,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         setUser(userData);
+        // Store in both localStorage and sessionStorage for cross-browser support
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+        document.cookie = `${AUTH_USER_KEY}=${JSON.stringify(userData)}; path=/; max-age=2592000`; // 30 days
         console.log("User logged in:", userData.email);
         toast.success("Login successful");
         return true;
@@ -167,7 +175,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setUser(userData);
+      // Store in both localStorage and sessionStorage for cross-browser support
       localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+      sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+      document.cookie = `${AUTH_USER_KEY}=${JSON.stringify(userData)}; path=/; max-age=2592000`; // 30 days
       console.log("New user registered:", userData.email);
       toast.success("Registration successful");
       return true;
@@ -183,6 +194,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem(AUTH_USER_KEY);
+    sessionStorage.removeItem(AUTH_USER_KEY);
+    document.cookie = `${AUTH_USER_KEY}=; path=/; max-age=0`;
     console.log("User logged out");
     toast.success("Logged out successfully");
   };

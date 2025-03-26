@@ -12,6 +12,7 @@ services:
       - app-data:/usr/share/nginx/html/data
     networks:
       - app-network
+    restart: always
 
   db:
     image: postgres:13
