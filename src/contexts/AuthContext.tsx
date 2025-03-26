@@ -39,15 +39,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const restoreUserSession = () => {
       try {
-        const storedUser = localStorage.getItem(AUTH_USER_KEY);
+        // Try to get user from localStorage first
+        let storedUser = localStorage.getItem(AUTH_USER_KEY);
+        
+        // If not in localStorage, try sessionStorage
+        if (!storedUser) {
+          storedUser = sessionStorage.getItem(AUTH_USER_KEY);
+        }
+        
+        // If not in sessionStorage, try cookies
+        if (!storedUser) {
+          const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+          const authCookie = cookies.find(cookie => cookie.startsWith(`${AUTH_USER_KEY}=`));
+          if (authCookie) {
+            storedUser = decodeURIComponent(authCookie.split('=')[1]);
+          }
+        }
+        
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          console.log("User session restored:", parsedUser.email);
+          
+          // Ensure the user exists in local storage database
+          const users = getStoredUsers();
+          const userExists = Object.values(users).some(u => 
+            u.email.toLowerCase() === parsedUser.email.toLowerCase()
+          );
+          
+          if (userExists) {
+            setUser(parsedUser);
+            
+            // Sync the user across all storage mechanisms
+            storeUserInAllStorages(parsedUser);
+            
+            console.log("User session restored:", parsedUser.email);
+          } else {
+            console.warn("User found in session but not in users database");
+            clearAllStorages();
+          }
         }
       } catch (error) {
         console.error("Failed to restore user session:", error);
-        localStorage.removeItem(AUTH_USER_KEY);
+        clearAllStorages();
       } finally {
         setLoading(false);
       }
@@ -56,10 +88,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     restoreUserSession();
   }, []);
 
+  // Clear all storage mechanisms
+  const clearAllStorages = () => {
+    localStorage.removeItem(AUTH_USER_KEY);
+    sessionStorage.removeItem(AUTH_USER_KEY);
+    document.cookie = `${AUTH_USER_KEY}=; path=/; max-age=0; domain=${window.location.hostname}; SameSite=Lax`;
+  };
+  
+  // Store user in all storage mechanisms
+  const storeUserInAllStorages = (userData: User) => {
+    const userJSON = JSON.stringify(userData);
+    
+    // Store in localStorage (persists across sessions)
+    localStorage.setItem(AUTH_USER_KEY, userJSON);
+    
+    // Store in sessionStorage (persists during the session)
+    sessionStorage.setItem(AUTH_USER_KEY, userJSON);
+    
+    // Store in cookies (accessible across subdomains)
+    const domain = window.location.hostname;
+    const maxAge = 30 * 24 * 60 * 60; // 30 days
+    document.cookie = `${AUTH_USER_KEY}=${encodeURIComponent(userJSON)}; path=/; max-age=${maxAge}; domain=${domain}; SameSite=Lax`;
+  };
+
   // Get stored users or initialize empty object
   const getStoredUsers = (): Record<string, { id: string; name: string; email: string; password: string }> => {
     try {
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      // First check localStorage
+      let storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      
+      if (!storedUsers) {
+        // Check if users are in sessionStorage (less likely but possible)
+        storedUsers = sessionStorage.getItem(USERS_STORAGE_KEY);
+      }
+      
       if (storedUsers) {
         return JSON.parse(storedUsers);
       }
@@ -69,12 +131,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return {};
   };
 
-  // Save users to localStorage
+  // Save users to all storage mechanisms
   const saveUsers = (users: Record<string, { id: string; name: string; email: string; password: string }>) => {
     try {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-      // Also save to session storage to help with cross-browser persistence
-      sessionStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      const usersJSON = JSON.stringify(users);
+      
+      // Save to localStorage (persists across sessions)
+      localStorage.setItem(USERS_STORAGE_KEY, usersJSON);
+      
+      // Also save to sessionStorage for redundancy
+      sessionStorage.setItem(USERS_STORAGE_KEY, usersJSON);
+      
       console.log("Users database updated, total users:", Object.keys(users).length);
     } catch (error) {
       console.error("Failed to save users:", error);
@@ -98,10 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         setUser(userData);
-        // Store in both localStorage and sessionStorage for cross-browser support
-        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
-        sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
-        document.cookie = `${AUTH_USER_KEY}=${JSON.stringify(userData)}; path=/; max-age=2592000`; // 30 days
+        storeUserInAllStorages(userData);
         console.log("Demo user logged in");
         toast.success("Login successful");
         return true;
@@ -119,10 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         setUser(userData);
-        // Store in both localStorage and sessionStorage for cross-browser support
-        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
-        sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
-        document.cookie = `${AUTH_USER_KEY}=${JSON.stringify(userData)}; path=/; max-age=2592000`; // 30 days
+        storeUserInAllStorages(userData);
         console.log("User logged in:", userData.email);
         toast.success("Login successful");
         return true;
@@ -175,10 +236,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setUser(userData);
-      // Store in both localStorage and sessionStorage for cross-browser support
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
-      sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
-      document.cookie = `${AUTH_USER_KEY}=${JSON.stringify(userData)}; path=/; max-age=2592000`; // 30 days
+      storeUserInAllStorages(userData);
       console.log("New user registered:", userData.email);
       toast.success("Registration successful");
       return true;
@@ -193,9 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem(AUTH_USER_KEY);
-    sessionStorage.removeItem(AUTH_USER_KEY);
-    document.cookie = `${AUTH_USER_KEY}=; path=/; max-age=0`;
+    clearAllStorages();
     console.log("User logged out");
     toast.success("Logged out successfully");
   };

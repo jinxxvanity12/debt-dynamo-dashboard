@@ -246,16 +246,31 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     try {
       let userData: AppData | null = null;
       
+      // Try to get data from localStorage first
       const storedData = localStorage.getItem(getStorageKey(userId));
+      
+      // If data exists in localStorage, parse it
       if (storedData) {
         userData = JSON.parse(storedData);
+        console.log(`Loaded data for user ${userId}`, userData);
       } else {
-        userData = generateEmptyData();
-        saveData(userData);
+        // If not in localStorage, try sessionStorage
+        const sessionData = sessionStorage.getItem(getStorageKey(userId));
+        if (sessionData) {
+          userData = JSON.parse(sessionData);
+          console.log(`Loaded data from sessionStorage for user ${userId}`);
+          
+          // Save to localStorage for future persistence
+          localStorage.setItem(getStorageKey(userId), sessionData);
+        } else {
+          // If no data found, generate empty data
+          userData = generateEmptyData();
+          saveData(userData);
+          console.log(`Generated new data for user ${userId}`);
+        }
       }
       
       setData(userData);
-      console.log(`Loaded data for user ${userId}`, userData);
     } catch (error) {
       console.error("Error loading app data:", error);
       toast.error("Failed to load your financial data");
@@ -269,8 +284,16 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
   const saveData = (newData: AppData) => {
     if (user) {
-      localStorage.setItem(getStorageKey(user.id), JSON.stringify(newData));
-      console.log(`Saved data for user ${user.id}`);
+      try {
+        const dataJSON = JSON.stringify(newData);
+        // Save to both localStorage and sessionStorage for redundancy
+        localStorage.setItem(getStorageKey(user.id), dataJSON);
+        sessionStorage.setItem(getStorageKey(user.id), dataJSON);
+        console.log(`Saved data for user ${user.id}`);
+      } catch (error) {
+        console.error("Error saving app data:", error);
+        toast.error("Failed to save your financial data");
+      }
     }
   };
 
