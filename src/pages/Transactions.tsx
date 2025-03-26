@@ -123,7 +123,7 @@ const Transactions = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-16">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Transactions</h1>
         <Button onClick={() => setShowAddModal(true)} className="flex items-center">
@@ -198,7 +198,7 @@ const Transactions = () => {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem key="all-categories" value="all-categories">All Categories</SelectItem>
+                  <SelectItem value="">All Categories</SelectItem>
                   {data.categories.map((category) => (
                     <SelectItem key={category.id} value={category.name}>
                       {category.name}
@@ -214,9 +214,9 @@ const Transactions = () => {
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem key="all-types" value="all-types">All Types</SelectItem>
-                  <SelectItem key="income-type" value="income">Income</SelectItem>
-                  <SelectItem key="expense-type" value="expense">Expense</SelectItem>
+                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="income">Income</SelectItem>
+                  <SelectItem value="expense">Expense</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -354,6 +354,18 @@ const Transactions = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Fixed Add Transaction Button */}
+      <div className="fixed bottom-4 right-4 z-10">
+        <Button 
+          onClick={() => setShowAddModal(true)} 
+          size="lg"
+          className="rounded-full shadow-lg flex items-center gap-2"
+        >
+          <Plus className="h-5 w-5" />
+          Add Transaction
+        </Button>
+      </div>
 
       {/* Add Transaction Modal */}
       {showAddModal && (

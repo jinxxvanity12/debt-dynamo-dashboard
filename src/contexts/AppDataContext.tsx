@@ -111,7 +111,7 @@ const defaultCategories: Category[] = [
   { id: "cat-5", name: "Salary", color: "#22C55E", icon: "briefcase", type: "income" },
 ];
 
-// Generate empty monthly data
+// Generate empty monthly data for the entire current year
 const generateEmptyMonthlyData = (): MonthlyData[] => {
   const currentYear = new Date().getFullYear();
   return Array.from({ length: 12 }, (_, i) => {

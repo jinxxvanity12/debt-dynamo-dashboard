@@ -202,11 +202,22 @@ const Dashboard = () => {
       return;
     }
     
-    if (nextMonth.getFullYear() === currentYear && nextMonth.getMonth() > new Date().getMonth()) {
-      return;
-    }
-    
     setSelectedMonth(format(nextMonth, "MMMM yyyy"));
+  };
+
+  const canNavigateToPreviousMonth = () => {
+    const currentDate = parse(selectedMonth, "MMMM yyyy", new Date());
+    const previousMonth = addMonths(currentDate, -1);
+    const currentYear = new Date().getFullYear();
+    return previousMonth.getFullYear() >= currentYear;
+  };
+
+  const canNavigateToNextMonth = () => {
+    const currentDate = parse(selectedMonth, "MMMM yyyy", new Date());
+    const nextMonth = addMonths(currentDate, 1);
+    const currentYear = new Date().getFullYear();
+    
+    return nextMonth.getFullYear() <= currentYear;
   };
 
   const formatCurrency = (amount: number) => {
@@ -284,13 +295,6 @@ const Dashboard = () => {
   const savingsRateChange = savingsRate - previousSavingsRate;
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#FF6B6B"];
-
-  const canNavigateToPreviousMonth = () => {
-    const currentDate = parse(selectedMonth, "MMMM yyyy", new Date());
-    const previousMonth = addMonths(currentDate, -1);
-    const currentYear = new Date().getFullYear();
-    return previousMonth.getFullYear() >= currentYear;
-  };
 
   const renderFinancialStats = () => (
     <Card className="w-full" id={DashboardSection.FINANCIAL_STATS}>
@@ -716,7 +720,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-16">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <div className="flex items-center space-x-2">
@@ -744,16 +748,8 @@ const Dashboard = () => {
             variant="ghost"
             size="icon"
             onClick={handleNextMonth}
-            className={`h-8 w-8 ${
-              isThisMonth(parse(selectedMonth, "MMMM yyyy", new Date())) &&
-              isThisYear(parse(selectedMonth, "MMMM yyyy", new Date()))
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
-            disabled={
-              isThisMonth(parse(selectedMonth, "MMMM yyyy", new Date())) &&
-              isThisYear(parse(selectedMonth, "MMMM yyyy", new Date()))
-            }
+            className="h-8 w-8"
+            disabled={!canNavigateToNextMonth()}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -778,6 +774,17 @@ const Dashboard = () => {
           </div>
         </SortableContext>
       </DndContext>
+      
+      <div className="fixed bottom-4 right-4 z-10">
+        <Button 
+          onClick={() => setShowAddTransaction(true)} 
+          size="lg"
+          className="rounded-full shadow-lg flex items-center gap-2"
+        >
+          <Plus className="h-5 w-5" />
+          Add Transaction
+        </Button>
+      </div>
       
       {showAddTransaction && (
         <AddTransactionModal 
@@ -824,4 +831,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
