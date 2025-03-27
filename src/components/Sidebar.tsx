@@ -11,17 +11,13 @@ import {
   BarChart3, 
   Tag, 
   ArrowLeftCircle,
-  ArrowRightCircle,
-  LogOut
+  ArrowRightCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 export function Sidebar() {
   const { pathname } = useLocation();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const mainNavItems = [
@@ -64,12 +60,6 @@ export function Sidebar() {
       icon: CreditCard,
     },
   ];
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-    toast.success("Successfully logged out");
-  };
 
   return (
     <div
@@ -146,13 +136,13 @@ export function Sidebar() {
           "flex items-center",
           collapsed ? "justify-center" : "justify-between"
         )}>
-          {!collapsed && (
+          {!collapsed && user && (
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                {user?.name.charAt(0)}
+                {user.name.charAt(0)}
               </div>
               <div className="text-sm font-medium truncate-text max-w-[130px]">
-                {user?.name}
+                {user.name}
               </div>
             </div>
           )}
@@ -166,19 +156,6 @@ export function Sidebar() {
             {collapsed ? <ArrowRightCircle size={20} /> : <ArrowLeftCircle size={20} />}
           </Button>
         </div>
-        
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon" : "default"}
-          onClick={handleLogout}
-          className={cn(
-            "mt-2 w-full text-muted-foreground hover:text-foreground",
-            collapsed && "justify-center"
-          )}
-        >
-          <LogOut size={18} className={collapsed ? "" : "mr-2"} />
-          {!collapsed && "Logout"}
-        </Button>
       </div>
     </div>
   );
