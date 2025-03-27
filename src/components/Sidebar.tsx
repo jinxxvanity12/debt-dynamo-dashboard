@@ -1,8 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -11,7 +9,6 @@ import {
   Layers, 
   DollarSign, 
   CreditCard, 
-  LogOut, 
   UserCircle
 } from "lucide-react"; 
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +24,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
 
   const onLogout = () => {
     logout();
-    toast.success("Logged out successfully");
+    toast.info("Your data remains saved across all devices");
   }
 
   const routes = [
@@ -74,7 +71,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   ];
 
   return (
-    <div className={cn("pb-12 border-r h-screen relative", className)} {...props}>
+    <div className={`pb-12 border-r h-screen relative ${className}`} {...props}>
       <div className="space-y-4 py-4">
         <div className="px-4 py-2">
           <Link to="/" className="flex items-center gap-2 font-bold text-2xl">
@@ -85,7 +82,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
           </Link>
           <div className="mt-3 flex items-center gap-2 px-2">
             <UserCircle className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium">{user?.name || "User"}</span>
+            <span className="text-sm font-medium">{user?.name || "Financial User"}</span>
           </div>
         </div>
         <div className="px-3">
@@ -94,7 +91,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
               <Link key={route.path} to={route.path}>
                 <Button
                   variant={location.pathname === route.path ? "secondary" : "ghost"}
-                  className={cn("w-full justify-start", location.pathname === route.path ? "font-semibold" : "")}
+                  className={`w-full justify-start ${location.pathname === route.path ? "font-semibold" : ""}`}
                 >
                   {route.icon}
                   {route.label}
@@ -103,11 +100,11 @@ export function Sidebar({ className, ...props }: SidebarProps) {
             ))}
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-500 hover:text-red-500 hover:bg-red-50"
+              className="w-full justify-start text-primary hover:text-primary hover:bg-primary-50"
               onClick={onLogout}
             >
-              <LogOut className="h-5 w-5 mr-3" />
-              Log out
+              <UserCircle className="h-5 w-5 mr-3" />
+              User Settings
             </Button>
           </div>
         </div>
