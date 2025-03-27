@@ -17,7 +17,6 @@ import Reports from "./pages/Reports";
 import Categories from "./pages/Categories";
 import SavingsGoals from "./pages/SavingsGoals";
 import DebtTracker from "./pages/DebtTracker";
-import MonthlyOverview from "./pages/MonthlyOverview";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -43,7 +42,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                <Route index element={<Navigate to="/monthly-overview" replace />} />
+                <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="transactions" element={<Transactions />} />
                 <Route path="budget" element={<Budget />} />
@@ -51,7 +50,6 @@ const App = () => (
                 <Route path="categories" element={<Categories />} />
                 <Route path="savings" element={<SavingsGoals />} />
                 <Route path="debt" element={<DebtTracker />} />
-                <Route path="monthly-overview" element={<MonthlyOverview />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

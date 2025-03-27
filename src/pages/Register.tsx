@@ -24,13 +24,13 @@ const Register = () => {
     
     setIsLoading(false);
     if (success) {
-      navigate("/monthly-overview");
+      navigate("/dashboard");
     }
   };
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate("/monthly-overview");
+    navigate("/dashboard");
     return null;
   }
 

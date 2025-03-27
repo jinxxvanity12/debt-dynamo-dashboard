@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,29 +9,11 @@ import { CircleDollarSign, User, Lock, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Login = () => {
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [autoLoginEnabled, setAutoLoginEnabled] = useState(true);
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Auto-login with demo account for better user experience
-    const autoLogin = async () => {
-      if (autoLoginEnabled && !isAuthenticated) {
-        setIsLoading(true);
-        const success = await login("demo@example.com", "password");
-        setIsLoading(false);
-        if (success) {
-          navigate("/monthly-overview");
-        }
-      }
-    };
-    
-    const timer = setTimeout(autoLogin, 1000);
-    return () => clearTimeout(timer);
-  }, [autoLoginEnabled, isAuthenticated, login, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,13 +23,13 @@ const Login = () => {
     
     setIsLoading(false);
     if (success) {
-      navigate("/monthly-overview");
+      navigate("/dashboard");
     }
   };
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate("/monthly-overview");
+    navigate("/dashboard");
     return null;
   }
 
@@ -61,7 +43,7 @@ const Login = () => {
             </div>
           </div>
           <h1 className="mt-4 text-2xl font-bold">Welcome to SavingsSaga</h1>
-          <p className="mt-2 text-muted-foreground">Track your finances across any device</p>
+          <p className="mt-2 text-muted-foreground">Sign in to manage your finances</p>
         </div>
 
         <div className="mt-8 p-6 bg-white shadow-sm rounded-lg border border-border glass">
@@ -140,7 +122,7 @@ const Login = () => {
 
           <div className="mt-6 border-t border-border pt-4">
             <p className="text-sm text-center text-muted-foreground">
-              Auto-logged in with demo account for easy testing
+              Demo credentials: <span className="font-medium">demo@example.com</span> / <span className="font-medium">password</span>
             </p>
           </div>
         </div>

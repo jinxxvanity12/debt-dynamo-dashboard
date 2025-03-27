@@ -35,9 +35,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Enhanced user session restoration on initial load with synchronization
+  // Enhanced user session restoration on initial load
   useEffect(() => {
-    const restoreUserSession = async () => {
+    const restoreUserSession = () => {
       try {
         // Try to get user from localStorage first
         let storedUser = localStorage.getItem(AUTH_USER_KEY);
@@ -86,31 +86,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     restoreUserSession();
-    
-    // Setup storage event listener to sync across tabs
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === AUTH_USER_KEY) {
-        if (event.newValue) {
-          try {
-            const parsedUser = JSON.parse(event.newValue);
-            setUser(parsedUser);
-          } catch (error) {
-            console.error("Failed to parse user from storage event", error);
-          }
-        } else {
-          // User logged out in another tab
-          setUser(null);
-        }
-      } else if (event.key === USERS_STORAGE_KEY) {
-        // Users database updated in another tab, no action needed here
-        console.log("Users database updated in another tab");
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
   }, []);
 
   // Clear all storage mechanisms
@@ -132,8 +107,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Store in cookies (accessible across subdomains)
     const domain = window.location.hostname;
-    const maxAge = 365 * 24 * 60 * 60; // 1 year
-    document.cookie = `${AUTH_USER_KEY}=${encodeURIComponent(userJSON)}; path=/; max-age=${maxAge}; domain=${domain}; SameSite=Lax; secure`;
+    const maxAge = 30 * 24 * 60 * 60; // 30 days
+    document.cookie = `${AUTH_USER_KEY}=${encodeURIComponent(userJSON)}; path=/; max-age=${maxAge}; domain=${domain}; SameSite=Lax`;
   };
 
   // Get stored users or initialize empty object
@@ -173,58 +148,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast.error("Failed to update user database");
     }
   };
-
-  // Auto-login with demo account for convenience
-  useEffect(() => {
-    const autoLogin = async () => {
-      // Skip if already loaded or user is already authenticated
-      if (!loading && !user) {
-        // Create demo account if it doesn't exist
-        const users = getStoredUsers();
-        const demoUser = Object.values(users).find(u => u.email === "demo@example.com");
-        
-        if (!demoUser) {
-          // Create demo account
-          const userId = "demo-user";
-          const newUser = {
-            id: userId,
-            name: "Demo User",
-            email: "demo@example.com",
-            password: "password"
-          };
-          
-          users[userId] = newUser;
-          saveUsers(users);
-          
-          // Auto-login with demo account
-          const userData = {
-            id: userId,
-            name: "Demo User",
-            email: "demo@example.com"
-          };
-          
-          setUser(userData);
-          storeUserInAllStorages(userData);
-          toast.success("Logged in with demo account");
-        } else {
-          // Auto-login with existing demo account
-          const userData = {
-            id: demoUser.id,
-            name: demoUser.name,
-            email: demoUser.email
-          };
-          
-          setUser(userData);
-          storeUserInAllStorages(userData);
-          toast.success("Logged in with demo account");
-        }
-      }
-    };
-    
-    // Auto-login after a short delay
-    const timer = setTimeout(autoLogin, 500);
-    return () => clearTimeout(timer);
-  }, [loading, user]);
 
   const login = async (email: string, password: string) => {
     try {
