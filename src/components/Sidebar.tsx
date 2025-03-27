@@ -1,113 +1,184 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 import { 
   LayoutDashboard, 
-  Calendar, 
-  Receipt, 
-  PieChart, 
-  Layers, 
-  DollarSign, 
+  CircleDollarSign, 
+  PiggyBank, 
   CreditCard, 
-  UserCircle
-} from "lucide-react"; 
-import { useAuth } from "@/contexts/AuthContext";
+  BarChart3, 
+  Tag, 
+  ArrowLeftCircle,
+  ArrowRightCircle,
+  LogOut
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useState } from "react";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-export function Sidebar({ className, ...props }: SidebarProps) {
+export function Sidebar() {
+  const { pathname } = useLocation();
   const { user, logout } = useAuth();
-  const location = useLocation();
-  const [isOpen, setIsOpen] = useState(true);
+  const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
 
-  const onLogout = () => {
-    logout();
-    toast.info("Your data remains saved across all devices");
-  }
-
-  const routes = [
+  const mainNavItems = [
     {
-      path: "/monthly-overview",
-      label: "Monthly Overview",
-      icon: <Calendar className="h-5 w-5 mr-3" />
+      title: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
     },
     {
-      path: "/dashboard",
-      label: "Dashboard",
-      icon: <LayoutDashboard className="h-5 w-5 mr-3" />
+      title: "Transactions",
+      href: "/transactions",
+      icon: CircleDollarSign,
     },
     {
-      path: "/transactions",
-      label: "Transactions",
-      icon: <Receipt className="h-5 w-5 mr-3" />
+      title: "Budget",
+      href: "/budget",
+      icon: PiggyBank,
     },
     {
-      path: "/budget",
-      label: "Budget",
-      icon: <PieChart className="h-5 w-5 mr-3" />
+      title: "Reports",
+      href: "/reports",
+      icon: BarChart3,
     },
     {
-      path: "/categories",
-      label: "Categories",
-      icon: <Layers className="h-5 w-5 mr-3" />
+      title: "Categories",
+      href: "/categories",
+      icon: Tag,
     },
-    {
-      path: "/savings",
-      label: "Savings Goals",
-      icon: <DollarSign className="h-5 w-5 mr-3" />
-    },
-    {
-      path: "/debt",
-      label: "Debt Tracker",
-      icon: <CreditCard className="h-5 w-5 mr-3" />
-    },
-    {
-      path: "/reports",
-      label: "Reports",
-      icon: <PieChart className="h-5 w-5 mr-3" />
-    }
   ];
 
+  const savingsNavItems = [
+    {
+      title: "Savings Goals",
+      href: "/savings",
+      icon: PiggyBank,
+    },
+    {
+      title: "Debt Tracker",
+      href: "/debt",
+      icon: CreditCard,
+    },
+  ];
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+    toast.success("Successfully logged out");
+  };
+
   return (
-    <div className={`pb-12 border-r h-screen relative ${className}`} {...props}>
-      <div className="space-y-4 py-4">
-        <div className="px-4 py-2">
-          <Link to="/" className="flex items-center gap-2 font-bold text-2xl">
-            <span className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white">
-              <DollarSign className="h-5 w-5" />
-            </span>
-            <span>SavingsSaga</span>
-          </Link>
-          <div className="mt-3 flex items-center gap-2 px-2">
-            <UserCircle className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium">{user?.name || "Financial User"}</span>
-          </div>
-        </div>
-        <div className="px-3">
-          <div className="space-y-1">
-            {routes.map((route) => (
-              <Link key={route.path} to={route.path}>
-                <Button
-                  variant={location.pathname === route.path ? "secondary" : "ghost"}
-                  className={`w-full justify-start ${location.pathname === route.path ? "font-semibold" : ""}`}
-                >
-                  {route.icon}
-                  {route.label}
-                </Button>
+    <div
+      className={cn(
+        "flex flex-col h-screen bg-sidebar border-r border-border transition-all duration-300 ease-in-out",
+        collapsed ? "w-[70px]" : "w-[250px]"
+      )}
+    >
+      <div className="flex items-center px-4 h-14 border-b border-border">
+        <Link
+          to="/dashboard"
+          className={cn(
+            "flex items-center font-semibold text-primary text-lg transition-all duration-300",
+            collapsed && "justify-center"
+          )}
+        >
+          <span className="text-primary">
+            <CircleDollarSign className="h-6 w-6" />
+          </span>
+          {!collapsed && <span className="ml-2">SavingsSaga</span>}
+        </Link>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-4 px-3">
+        <nav className="space-y-1">
+          {mainNavItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                "flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
+                pathname === item.href
+                  ? "bg-primary text-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                collapsed && "justify-center"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5", collapsed ? "mr-0" : "mr-2")} />
+              {!collapsed && <span>{item.title}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="mt-8">
+          <h3 className={cn(
+            "px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+            collapsed && "text-center"
+          )}>
+            {!collapsed ? "Financial Goals" : "Goals"}
+          </h3>
+          <nav className="mt-2 space-y-1">
+            {savingsNavItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  "flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
+                  pathname === item.href
+                    ? "bg-primary text-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  collapsed && "justify-center"
+                )}
+              >
+                <item.icon className={cn("h-5 w-5", collapsed ? "mr-0" : "mr-2")} />
+                {!collapsed && <span>{item.title}</span>}
               </Link>
             ))}
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-primary hover:text-primary hover:bg-primary-50"
-              onClick={onLogout}
-            >
-              <UserCircle className="h-5 w-5 mr-3" />
-              User Settings
-            </Button>
-          </div>
+          </nav>
         </div>
+      </div>
+
+      <div className="p-3 border-t border-border">
+        <div className={cn(
+          "flex items-center",
+          collapsed ? "justify-center" : "justify-between"
+        )}>
+          {!collapsed && (
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+                {user?.name.charAt(0)}
+              </div>
+              <div className="text-sm font-medium truncate-text max-w-[130px]">
+                {user?.name}
+              </div>
+            </div>
+          )}
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {collapsed ? <ArrowRightCircle size={20} /> : <ArrowLeftCircle size={20} />}
+          </Button>
+        </div>
+        
+        <Button
+          variant="ghost"
+          size={collapsed ? "icon" : "default"}
+          onClick={handleLogout}
+          className={cn(
+            "mt-2 w-full text-muted-foreground hover:text-foreground",
+            collapsed && "justify-center"
+          )}
+        >
+          <LogOut size={18} className={collapsed ? "" : "mr-2"} />
+          {!collapsed && "Logout"}
+        </Button>
       </div>
     </div>
   );

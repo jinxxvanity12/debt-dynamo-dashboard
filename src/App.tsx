@@ -8,6 +8,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { AppDataProvider } from "./contexts/AppDataContext";
 
 // Pages
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Budget from "./pages/Budget";
@@ -15,9 +17,9 @@ import Reports from "./pages/Reports";
 import Categories from "./pages/Categories";
 import SavingsGoals from "./pages/SavingsGoals";
 import DebtTracker from "./pages/DebtTracker";
-import MonthlyOverview from "./pages/MonthlyOverview";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,8 +39,10 @@ const App = () => (
           <Sonner position="top-right" />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Navigate to="/monthly-overview" replace />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="transactions" element={<Transactions />} />
                 <Route path="budget" element={<Budget />} />
@@ -46,11 +50,7 @@ const App = () => (
                 <Route path="categories" element={<Categories />} />
                 <Route path="savings" element={<SavingsGoals />} />
                 <Route path="debt" element={<DebtTracker />} />
-                <Route path="monthly-overview" element={<MonthlyOverview />} />
               </Route>
-              {/* Redirect login and register to the main app */}
-              <Route path="/login" element={<Navigate to="/monthly-overview" replace />} />
-              <Route path="/register" element={<Navigate to="/monthly-overview" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -102,10 +102,7 @@ export const useAppData = () => {
   return context;
 };
 
-// Global unique identifier for storage across all devices
-const GLOBAL_APP_STORAGE_KEY = "savings-saga-global-data-v1";
-
-// Default categories for new users
+// Default categories for new users - reduced to just essentials
 const defaultCategories: Category[] = [
   { id: "cat-1", name: "Housing", color: "#3B82F6", icon: "home", type: "expense" },
   { id: "cat-2", name: "Food", color: "#F97316", icon: "utensils", type: "expense" },
@@ -130,94 +127,25 @@ const generateEmptyMonthlyData = (): MonthlyData[] => {
   });
 };
 
-// Generate sample data with basic transactions and budgets
-const generateSampleData = (): AppData => {
+// Empty data structure
+const generateEmptyData = (): AppData => {
   const monthlyData = generateEmptyMonthlyData();
   const currentMonth = format(new Date(), "MMMM yyyy");
-  const currentMonthIndex = new Date().getMonth();
-  
-  // Add some sample transactions
-  const transactions = [
-    {
-      id: "tx-1",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Monthly Salary",
-      amount: 3500,
-      category: "Salary",
-      type: "income" as const
-    },
-    {
-      id: "tx-2",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Rent Payment",
-      amount: 1200,
-      category: "Housing",
-      type: "expense" as const
-    },
-    {
-      id: "tx-3",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "Grocery Shopping",
-      amount: 150,
-      category: "Food",
-      type: "expense" as const
-    }
-  ];
-  
-  // Update monthly data with sample transactions
-  monthlyData[currentMonthIndex].income = 3500;
-  monthlyData[currentMonthIndex].expenses = 1350;
-  monthlyData[currentMonthIndex].balance = 2150;
-  monthlyData[currentMonthIndex].savingsRate = 61;
-  
-  // Create some sample budgets
-  const budgets = [
-    {
-      id: "budget-1",
-      category: "Housing",
-      amount: 1300
-    },
-    {
-      id: "budget-2",
-      category: "Food",
-      amount: 500
-    },
-    {
-      id: "budget-3",
-      category: "Transportation",
-      amount: 200
-    }
-  ];
-  
-  // Create sample savings goals
-  const savingsGoals = [
-    {
-      id: "savings-1",
-      name: "Emergency Fund",
-      targetAmount: 10000,
-      currentAmount: 5000,
-      icon: "shield"
-    },
-    {
-      id: "savings-2",
-      name: "Vacation",
-      targetAmount: 2000,
-      currentAmount: 500,
-      deadline: format(new Date(new Date().setMonth(new Date().getMonth() + 6)), "yyyy-MM-dd"),
-      icon: "plane"
-    }
-  ];
   
   return {
-    transactions,
-    budgets,
-    savingsGoals,
+    transactions: [],
+    budgets: [],
+    savingsGoals: [],
     debts: [],
     categories: defaultCategories,
     monthlyData,
     selectedMonth: currentMonth
   };
 };
+
+// Local storage keys
+const STORAGE_KEY_PREFIX = "savings-saga-";
+const getStorageKey = (userId: string) => `${STORAGE_KEY_PREFIX}${userId}-data`;
 
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated } = useAuth();
@@ -232,114 +160,24 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Unified data loading function that works across devices
-  const loadGlobalData = () => {
-    setLoading(true);
-    
-    try {
-      let appData: AppData | null = null;
-      
-      // Try to get data from localStorage first
-      const storedData = localStorage.getItem(GLOBAL_APP_STORAGE_KEY);
-      
-      // If data exists in localStorage, parse it
-      if (storedData) {
-        appData = JSON.parse(storedData);
-        console.log("Loaded global data from localStorage");
-      } else {
-        // If not in localStorage, try to get from other storage mechanisms
-        try {
-          // Try IndexedDB if available (most persistent)
-          if (window.indexedDB) {
-            // IndexedDB would be implemented here
-            // For now we'll fall back to sessionStorage
-          }
-        } catch (e) {
-          console.warn("Failed to access IndexedDB:", e);
-        }
-        
-        // Try sessionStorage
-        const sessionData = sessionStorage.getItem(GLOBAL_APP_STORAGE_KEY);
-        if (sessionData) {
-          appData = JSON.parse(sessionData);
-          console.log("Loaded global data from sessionStorage");
-          
-          // Save to localStorage for future persistence
-          localStorage.setItem(GLOBAL_APP_STORAGE_KEY, sessionData);
-        } else {
-          // If no data found anywhere, generate sample data
-          appData = generateSampleData();
-          saveGlobalData(appData);
-          console.log("Generated new sample data");
-          toast.success("Welcome! Sample financial data has been loaded for you");
-        }
-      }
-      
-      setData(appData);
-    } catch (error) {
-      console.error("Error loading app data:", error);
-      toast.error("Failed to load your financial data");
-      
-      const sampleData = generateSampleData();
-      setData(sampleData);
-      saveGlobalData(sampleData);
-    } finally {
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadData(user.id);
+    } else {
+      // If not authenticated, reset data to empty
+      setData({
+        transactions: [],
+        budgets: [],
+        savingsGoals: [],
+        debts: [],
+        categories: [],
+        monthlyData: [],
+        selectedMonth: format(new Date(), "MMMM yyyy")
+      });
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, user]);
 
-  // Unified data saving function that works across devices
-  const saveGlobalData = (newData: AppData) => {
-    try {
-      const dataJSON = JSON.stringify(newData);
-      
-      // Save to localStorage (most common persistent storage)
-      localStorage.setItem(GLOBAL_APP_STORAGE_KEY, dataJSON);
-      
-      // Save to sessionStorage for redundancy
-      sessionStorage.setItem(GLOBAL_APP_STORAGE_KEY, dataJSON);
-      
-      // Try IndexedDB if available (would be implemented here)
-      
-      // Use cookies as another fallback (limited storage)
-      try {
-        // Store a cookie to indicate data exists
-        document.cookie = `${GLOBAL_APP_STORAGE_KEY}-exists=true; path=/; max-age=31536000`;
-      } catch (e) {
-        console.warn("Failed to set cookie:", e);
-      }
-      
-      console.log("Saved global data to multiple storage mechanisms");
-    } catch (error) {
-      console.error("Error saving app data:", error);
-      toast.error("Failed to save your financial data");
-    }
-  };
-
-  // Load data on initial mount
-  useEffect(() => {
-    loadGlobalData();
-    
-    // Setup storage event listener to sync across tabs
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === GLOBAL_APP_STORAGE_KEY && event.newValue) {
-        try {
-          const updatedData = JSON.parse(event.newValue);
-          setData(updatedData);
-          console.log("Data updated from another tab/window");
-        } catch (error) {
-          console.error("Failed to parse data from storage event:", error);
-        }
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  // Recalculate monthly data whenever transactions change
   useEffect(() => {
     if (data.transactions.length > 0 || data.monthlyData.length > 0) {
       const updatedMonthlyData = calculateMonthlyData(data.transactions);
@@ -350,13 +188,15 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
           monthlyData: updatedMonthlyData
         }));
         
-        saveGlobalData({
-          ...data,
-          monthlyData: updatedMonthlyData
-        });
+        if (user) {
+          saveData({
+            ...data,
+            monthlyData: updatedMonthlyData
+          });
+        }
       }
     }
-  }, [data.transactions]);
+  }, [data.transactions, user]);
 
   const calculateMonthlyData = (transactions: Transaction[]): MonthlyData[] => {
     const currentYear = new Date().getFullYear();
@@ -400,10 +240,67 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     return monthlyData;
   };
 
+  const loadData = (userId: string) => {
+    setLoading(true);
+    
+    try {
+      let userData: AppData | null = null;
+      
+      // Try to get data from localStorage first
+      const storedData = localStorage.getItem(getStorageKey(userId));
+      
+      // If data exists in localStorage, parse it
+      if (storedData) {
+        userData = JSON.parse(storedData);
+        console.log(`Loaded data for user ${userId}`, userData);
+      } else {
+        // If not in localStorage, try sessionStorage
+        const sessionData = sessionStorage.getItem(getStorageKey(userId));
+        if (sessionData) {
+          userData = JSON.parse(sessionData);
+          console.log(`Loaded data from sessionStorage for user ${userId}`);
+          
+          // Save to localStorage for future persistence
+          localStorage.setItem(getStorageKey(userId), sessionData);
+        } else {
+          // If no data found, generate empty data
+          userData = generateEmptyData();
+          saveData(userData);
+          console.log(`Generated new data for user ${userId}`);
+        }
+      }
+      
+      setData(userData);
+    } catch (error) {
+      console.error("Error loading app data:", error);
+      toast.error("Failed to load your financial data");
+      
+      const emptyData = generateEmptyData();
+      setData(emptyData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveData = (newData: AppData) => {
+    if (user) {
+      try {
+        const dataJSON = JSON.stringify(newData);
+        // Save to both localStorage and sessionStorage for redundancy
+        localStorage.setItem(getStorageKey(user.id), dataJSON);
+        sessionStorage.setItem(getStorageKey(user.id), dataJSON);
+        console.log(`Saved data for user ${user.id}`);
+      } catch (error) {
+        console.error("Error saving app data:", error);
+        toast.error("Failed to save your financial data");
+      }
+    }
+  };
+
   const setSelectedMonth = (month: string) => {
     const updatedData = { ...data, selectedMonth: month };
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
   };
 
   const addTransaction = (transaction: Omit<Transaction, "id">) => {
@@ -418,7 +315,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Transaction added successfully");
   };
 
@@ -433,7 +330,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Transaction updated successfully");
   };
 
@@ -449,7 +346,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Transaction deleted successfully");
   };
 
@@ -465,7 +362,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Budget added successfully");
   };
 
@@ -480,7 +377,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Budget updated successfully");
   };
 
@@ -493,7 +390,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Budget deleted successfully");
   };
 
@@ -509,7 +406,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Savings goal added successfully");
   };
 
@@ -524,7 +421,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Savings goal updated successfully");
   };
 
@@ -537,7 +434,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Savings goal deleted successfully");
   };
 
@@ -571,7 +468,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setData(updatedData);
-      saveGlobalData(updatedData);
+      saveData(updatedData);
       toast.success(`Added ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} to ${savingsGoal.name}`);
     }
   };
@@ -589,7 +486,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Debt added successfully");
   };
 
@@ -604,7 +501,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Debt updated successfully");
   };
 
@@ -617,7 +514,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Debt deleted successfully");
   };
 
@@ -654,7 +551,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setData(updatedData);
-      saveGlobalData(updatedData);
+      saveData(updatedData);
       
       if (updatedDebts.find(d => d.id === id)?.isCompleted) {
         toast.success(`Congratulations! ${debt.name} is now fully paid off!`);
@@ -682,7 +579,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Debt marked as completed");
   };
 
@@ -698,7 +595,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Category added successfully");
   };
 
@@ -713,7 +610,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Category updated successfully");
   };
 
@@ -739,7 +636,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setData(updatedData);
-    saveGlobalData(updatedData);
+    saveData(updatedData);
     toast.success("Category deleted successfully");
   };
 
